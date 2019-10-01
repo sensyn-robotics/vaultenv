@@ -70,3 +70,21 @@ PASSWORD={{ kv "https://invalid.sensyn.net/secrets/pass" }}
 	filter(fetcher{client, ""}, r, &b)
 	t.Fatalf("must be panic")
 }
+
+func TestEmptyLine(t *testing.T) {
+	var b bytes.Buffer
+	template := `USER=foo@example.com
+
+PASSWORD=mysecretvalue
+`
+	expected := `USER=foo@example.com
+
+PASSWORD=mysecretvalue
+`
+	client := &dummyClient{}
+	r := strings.NewReader(template)
+	filter(fetcher{client, ""}, r, &b)
+	if b.String() != expected {
+		t.Fatalf("got:%s want:%s", b.String(), expected)
+	}
+}

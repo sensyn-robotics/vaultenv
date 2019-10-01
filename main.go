@@ -38,9 +38,12 @@ func filter(f fetcher, in io.Reader, out io.Writer) {
 		if err := scanner.Err(); err != nil {
 			panic(err)
 		}
-		err := template.Must(t.Parse(scanner.Text())).Execute(out, nil)
-		if err != nil {
-			panic(err)
+		line := scanner.Text()
+		if line != "" {
+			err := template.Must(t.Parse(line)).Execute(out, nil)
+			if err != nil {
+				panic(err)
+			}
 		}
 		out.Write([]byte{'\n'})
 	}
