@@ -1,8 +1,8 @@
-# vaultenv [![Build Status](https://dev.azure.com/sensyn-robotics/vaultenv/_apis/build/status/sensyn-robotics.vaultenv?branchName=master)](https://dev.azure.com/sensyn-robotics/vaultenv/_build/latest?definitionId=1&branchName=master)
+# vaultenv [![Build Status](https://dev.azure.com/sensyn-robotics/vaultenv/_apis/build/status/sensyn-robotics.vaultenv?branchName=master)](https://dev.azure.com/sensyn-robotics/vaultenv/_build/latest?definitionId=1&branchName=master) ![Azure DevOps coverage (branch)](https://img.shields.io/azure-devops/coverage/sensyn-robotics/vaultenv/1/master)
 Replace Azure Keyvault
-## Install
+## Installation
 ```
-go get gitlab.com/vc-robotics/vaultenv
+go get github.com/sensyn-robotics/vaultenv
 ```
 ## Usage
 ### Permit get secrets on your VM
