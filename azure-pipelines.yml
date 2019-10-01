@@ -15,9 +15,17 @@ steps:
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
-- script: go test -v -cover ./...
+- script: |
+    go get github.com/axw/gocov/gocov
+    go get github.com/AlekSi/gocov-xml
+    go test -coverprofile=cover.out
+    gocov convert cover.out | gocov-xml > coverage.xml
   workingDirectory: '$(modulePath)'
   displayName: 'Run Tests'
+- task: PublishCodeCoverageResults@1
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(modulePath)/coverage.xml'
 - script: go build -v .
   workingDirectory: '$(modulePath)'
   displayName: 'Build'
