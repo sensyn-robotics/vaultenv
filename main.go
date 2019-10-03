@@ -59,6 +59,9 @@ func (f *fetcher) fetch(rawurl string) (string, error) {
 	}
 	b, err := f.getToken()
 	req, err := http.NewRequest("GET", rawurl+"?api-version=7.0", nil)
+	if err != nil {
+		return "", err
+	}
 	req.Header.Add("Authorization", "Bearer "+b)
 	req.Header.Add("Accept", "application/json")
 	res, err := f.client.Do(req)
