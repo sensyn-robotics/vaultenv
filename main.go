@@ -58,6 +58,9 @@ func (f *fetcher) fetch(rawurl string) (string, error) {
 		return "", fmt.Errorf("Invalid url - %s", rawurl)
 	}
 	b, err := f.getToken()
+	if err != nil {
+		return "", err
+	}
 	req, err := http.NewRequest("GET", rawurl+"?api-version=7.0", nil)
 	if err != nil {
 		return "", err
