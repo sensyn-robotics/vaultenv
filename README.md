@@ -1,5 +1,5 @@
 # vaultenv [![Build Status](https://dev.azure.com/sensyn-robotics/vaultenv/_apis/build/status/sensyn-robotics.vaultenv?branchName=master)](https://dev.azure.com/sensyn-robotics/vaultenv/_build/latest?definitionId=1&branchName=master) ![Azure DevOps coverage (branch)](https://img.shields.io/azure-devops/coverage/sensyn-robotics/vaultenv/1/master)
-Replace Azure Keyvault
+Replace Azure Keyvault Secret Identifier written into .env etc.
 ## Installation
 ```
 go get github.com/sensyn-robotics/vaultenv
