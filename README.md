@@ -5,7 +5,16 @@ Replace Azure Keyvault Secret Identifier written into .env etc.
 go get github.com/sensyn-robotics/vaultenv
 ```
 ## Usage
-### Permit get secrets on your VM
+###
+* Use service princilpal
+```
+$ export AZURE_USER=<service principal id>
+$ export AZURE_PASSWORD=<service principal secret>
+$ export AZURE_TENANT=<tenant id>
+```
+see detail https://docs.microsoft.com/en-us/azure/key-vault/general/group-permissions-for-apps#applications
+
+* or Use VM Identity
 ```
 $ az vm identity assign --name <NameOfYourVirtualMachine> --resource-group <YourResourceGroupName>
 {
