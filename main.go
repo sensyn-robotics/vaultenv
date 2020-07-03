@@ -91,13 +91,13 @@ func (f *fetcher) getToken() (string, error) {
 		return f.token, nil
 	}
 	var req *http.Request
-	if clientId := os.Getenv("AZURE_USER"); clientId != "" {
+	if clientId := os.Getenv("VAULTENV_AZURE_USER"); clientId != "" {
 		values := url.Values{}
 		values.Set("grant_type", "client_credentials")
 		values.Add("client_id", clientId)
-		values.Add("client_secret", os.Getenv("AZURE_PASSWORD"))
+		values.Add("client_secret", os.Getenv("VAULTENV_AZURE_PASSWORD"))
 		values.Add("resource", "https://vault.azure.net")
-		req, _ = http.NewRequest("GET", fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", os.Getenv("AZURE_TENANT")), strings.NewReader(values.Encode()))
+		req, _ = http.NewRequest("GET", fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", os.Getenv("VAULTENV_AZURE_TENANT")), strings.NewReader(values.Encode()))
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	} else {
 		req, _ = http.NewRequest("GET", "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-06-04&resource=https%3A%2F%2Fvault.azure.net", nil)

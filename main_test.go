@@ -83,9 +83,9 @@ PASSWORD=mysecretvalue1
 }
 
 func TestValidTemplateWithClientCredential(t *testing.T) {
-	os.Setenv("AZURE_USER", "b3a0fa1e-2a56-44c5-9ec1-f95921243ed7")
-	os.Setenv("AZURE_PASSWORD", "7a724b98-f30e-4991-a020-fb56d12277e1")
-	os.Setenv("AZURE_TENANT", "5a9c134c-c9d6-4b9c-b588-94d3096dbf4c")
+	os.Setenv("VAULTENV_AZURE_USER", "b3a0fa1e-2a56-44c5-9ec1-f95921243ed7")
+	os.Setenv("VAULTENV_AZURE_PASSWORD", "7a724b98-f30e-4991-a020-fb56d12277e1")
+	os.Setenv("VAULTENV_AZURE_TENANT", "5a9c134c-c9d6-4b9c-b588-94d3096dbf4c")
 
 	var b bytes.Buffer
 	template := `USER=foo@example.com

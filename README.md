@@ -9,9 +9,9 @@ go get github.com/sensyn-robotics/vaultenv
 ###
 * Use service princilpal
 ```
-$ export AZURE_USER=<service principal id>
-$ export AZURE_PASSWORD=<service principal secret>
-$ export AZURE_TENANT=<tenant id>
+$ export VAULTENV_AZURE_USER=<service principal id>
+$ export VAULTENV_AZURE_PASSWORD=<service principal secret>
+$ export VAULTENV_AZURE_TENANT=<tenant id>
 ```
 see detail https://docs.microsoft.com/en-us/azure/key-vault/general/group-permissions-for-apps#applications
 
