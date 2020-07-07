@@ -90,8 +90,19 @@ func (f *fetcher) getToken() (string, error) {
 	if f.token != "" {
 		return f.token, nil
 	}
-	req, err := http.NewRequest("GET", "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-06-04&resource=https%3A%2F%2Fvault.azure.net", nil)
-	req.Header.Add("Metadata", "true")
+	var req *http.Request
+	if clientId := os.Getenv("VAULTENV_AZURE_USER"); clientId != "" {
+		values := url.Values{}
+		values.Set("grant_type", "client_credentials")
+		values.Add("client_id", clientId)
+		values.Add("client_secret", os.Getenv("VAULTENV_AZURE_PASSWORD"))
+		values.Add("resource", "https://vault.azure.net")
+		req, _ = http.NewRequest("GET", fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", os.Getenv("VAULTENV_AZURE_TENANT")), strings.NewReader(values.Encode()))
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req, _ = http.NewRequest("GET", "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-06-04&resource=https%3A%2F%2Fvault.azure.net", nil)
+		req.Header.Add("Metadata", "true")
+	}
 	res, err := f.client.Do(req)
 	if res.StatusCode != 200 {
 		return "", errors.New(res.Status)

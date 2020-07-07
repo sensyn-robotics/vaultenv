@@ -1,11 +1,21 @@
-# vaultenv [![Build Status](https://dev.azure.com/sensyn-robotics/vaultenv/_apis/build/status/sensyn-robotics.vaultenv?branchName=master)](https://dev.azure.com/sensyn-robotics/vaultenv/_build/latest?definitionId=1&branchName=master) ![Azure DevOps coverage (branch)](https://img.shields.io/azure-devops/coverage/sensyn-robotics/vaultenv/1/master)
+[![Build Status](https://github.com/sensyn-robotics/vaultenv/workflows/ci/badge.svg?branch=master)](https://github.com/sensyn-robotics/vaultenv/actions?query=branch%3Amaster) [![Codecov](https://img.shields.io/codecov/c/github/sensyn-robotics/vaultenv/master)](https://codecov.io/gh/sensyn-robotics/vaultenv/branch/master)
+# vaultenv 
 Replace Azure Keyvault Secret Identifier written into .env etc.
 ## Installation
 ```
 go get github.com/sensyn-robotics/vaultenv
 ```
 ## Usage
-### Permit get secrets on your VM
+###
+* Use service princilpal
+```
+$ export VAULTENV_AZURE_USER=<service principal id>
+$ export VAULTENV_AZURE_PASSWORD=<service principal secret>
+$ export VAULTENV_AZURE_TENANT=<tenant id>
+```
+see detail https://docs.microsoft.com/en-us/azure/key-vault/general/group-permissions-for-apps#applications
+
+* or Use VM Identity
 ```
 $ az vm identity assign --name <NameOfYourVirtualMachine> --resource-group <YourResourceGroupName>
 {
