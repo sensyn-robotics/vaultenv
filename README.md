@@ -4,6 +4,8 @@ Replace Azure Keyvault Secret Identifier written into .env etc.
 ## Installation
 ```
 go get github.com/sensyn-robotics/vaultenv
+# for go v1.18 and above
+go install github.com/sensyn-robotics/vaultenv@latest
 ```
 ## Usage
 ###
