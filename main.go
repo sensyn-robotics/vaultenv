@@ -104,6 +104,9 @@ func (f *fetcher) getToken() (string, error) {
 		req.Header.Add("Metadata", "true")
 	}
 	res, err := f.client.Do(req)
+	if err != nil {
+		return "", err
+	}
 	if res.StatusCode != 200 {
 		return "", errors.New(res.Status)
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -11,6 +12,12 @@ import (
 )
 
 type dummyClient struct{}
+
+type errorClient struct{}
+
+func (c *errorClient) Do(req *http.Request) (*http.Response, error) {
+	return nil, errors.New("connection timeout")
+}
 
 func (c *dummyClient) Do(req *http.Request) (*http.Response, error) {
 	var body string
@@ -132,4 +139,27 @@ PASSWORD=mysecretvalue1
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
+}
+
+func TestHttpRequestError(t *testing.T) {
+	var b bytes.Buffer
+	template := `PASSWORD={{ kv "https://example.vault.azure.net/secrets/pass" }}
+`
+	client := &errorClient{}
+	r := strings.NewReader(template)
+	defer func() {
+		if r := recover(); r != nil {
+			// Should panic with error message, not nil pointer dereference
+			panicMsg := fmt.Sprintf("%v", r)
+			if strings.Contains(panicMsg, "connection timeout") {
+				return // Expected behavior - error is properly propagated
+			}
+			if strings.Contains(panicMsg, "nil pointer") || strings.Contains(panicMsg, "invalid memory address") {
+				t.Fatalf("nil pointer dereference detected - fix not working: %v", r)
+			}
+			t.Fatalf("unexpected panic: %v", r)
+		}
+	}()
+	filter(fetcher{client, ""}, r, &b)
+	t.Fatalf("expected panic due to error, but none occurred")
 }
