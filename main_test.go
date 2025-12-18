@@ -148,16 +148,16 @@ func TestHttpRequestError(t *testing.T) {
 	client := &errorClient{}
 	r := strings.NewReader(template)
 	defer func() {
-		if r := recover(); r != nil {
+		if panicVal := recover(); panicVal != nil {
 			// Should panic with error message, not nil pointer dereference
-			panicMsg := fmt.Sprintf("%v", r)
+			panicMsg := fmt.Sprintf("%v", panicVal)
 			if strings.Contains(panicMsg, "connection timeout") {
 				return // Expected behavior - error is properly propagated
 			}
 			if strings.Contains(panicMsg, "nil pointer") || strings.Contains(panicMsg, "invalid memory address") {
-				t.Fatalf("nil pointer dereference detected - fix not working: %v", r)
+				t.Fatalf("nil pointer dereference detected - fix not working: %v", panicVal)
 			}
-			t.Fatalf("unexpected panic: %v", r)
+			t.Fatalf("unexpected panic: %v", panicVal)
 		}
 	}()
 	filter(fetcher{client, ""}, r, &b)
