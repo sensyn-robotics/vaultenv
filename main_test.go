@@ -2,108 +2,84 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 )
 
-type dummyClient struct{}
-
-type errorClient struct{}
-
-func (c *errorClient) Do(req *http.Request) (*http.Response, error) {
-	return nil, errors.New("connection timeout")
+type mockSecretClient struct {
+	secrets map[string]string
 }
 
-func (c *dummyClient) Do(req *http.Request) (*http.Response, error) {
-	var body string
-	if strings.HasPrefix(req.URL.String(), "http://169.254.169.254") {
-		body = `{
-  "access_token": "TOKEN_WITH_VM_IDENTITY",
-  "refresh_token": "",
-  "expires_in": "3599",
-  "expires_on": "1506484173",
-  "not_before": "1506480273",
-  "resource": "https://vault.azure.net/",
-  "token_type": "Bearer"
-}`
-	} else if strings.HasPrefix(req.URL.String(), "https://login.microsoftonline.com") {
-		body = `{
-  "access_token": "TOKEN_WITH_CLIENT_CREDENTIAL",
-  "refresh_token": "",
-  "expires_in": "3599",
-  "expires_on": "1506484173",
-  "not_before": "1506480273",
-  "resource": "https://vault.azure.net/",
-  "token_type": "Bearer"
-}`
-	} else if req.Header.Get("Authorization") == "Bearer TOKEN_WITH_VM_IDENTITY" {
-		body = `{
-  "value": "mysecretvalue1",
-  "id": "https://example.vault.azure.net/secrets/pass/4387e9f3d6e14c459867679a90fd0f79",
-  "attributes": {
-    "enabled": true,
-    "created": 1493938410,
-    "updated": 1493938410,
-    "recoveryLevel": "Recoverable+Purgeable"
-  }
-}`
-	} else if req.Header.Get("Authorization") == "Bearer TOKEN_WITH_CLIENT_CREDENTIAL" {
-		body = `{
-  "value": "mysecretvalue2",
-  "id": "https://example.vault.azure.net/secrets/pass/4387e9f3d6e14c459867679a90fd0f79",
-  "attributes": {
-    "enabled": true,
-    "created": 1493938410,
-    "updated": 1493938410,
-    "recoveryLevel": "Recoverable+Purgeable"
-  }
-}`
-	} else {
-		return nil, errors.New("Unexpected request")
+func (m *mockSecretClient) GetSecret(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+	value, ok := m.secrets[name]
+	if !ok {
+		return azsecrets.GetSecretResponse{}, errors.New("secret not found")
 	}
-	return &http.Response{
-		Status:     "200 OK",
-		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+	return azsecrets.GetSecretResponse{
+		Secret: azsecrets.Secret{
+			Value: &value,
+		},
 	}, nil
 }
 
-func TestValidTemplateWithVmIdentity(t *testing.T) {
+type errorSecretClient struct{}
+
+func (e *errorSecretClient) GetSecret(ctx context.Context, name string, version string, options *azsecrets.GetSecretOptions) (azsecrets.GetSecretResponse, error) {
+	return azsecrets.GetSecretResponse{}, errors.New("connection timeout")
+}
+
+func newTestFetcher(secrets map[string]string) *fetcher {
+	client := &mockSecretClient{secrets: secrets}
+	return &fetcher{
+		factory: func(vaultURL string) (secretClient, error) {
+			return client, nil
+		},
+		clients: make(map[string]secretClient),
+	}
+}
+
+func newErrorFetcher() *fetcher {
+	return &fetcher{
+		factory: func(vaultURL string) (secretClient, error) {
+			return &errorSecretClient{}, nil
+		},
+		clients: make(map[string]secretClient),
+	}
+}
+
+func TestValidTemplate(t *testing.T) {
 	var b bytes.Buffer
 	template := `USER=foo@example.com
 PASSWORD={{ kv "https://example.vault.azure.net/secrets/pass" }}
 `
 	expected := `USER=foo@example.com
-PASSWORD=mysecretvalue1
+PASSWORD=mysecretvalue
 `
-	client := &dummyClient{}
+	f := newTestFetcher(map[string]string{
+		"pass": "mysecretvalue",
+	})
 	r := strings.NewReader(template)
-	filter(fetcher{client, ""}, r, &b)
+	filter(f, r, &b)
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
 }
 
-func TestValidTemplateWithClientCredential(t *testing.T) {
-	os.Setenv("VAULTENV_AZURE_USER", "b3a0fa1e-2a56-44c5-9ec1-f95921243ed7")
-	os.Setenv("VAULTENV_AZURE_PASSWORD", "7a724b98-f30e-4991-a020-fb56d12277e1")
-	os.Setenv("VAULTENV_AZURE_TENANT", "5a9c134c-c9d6-4b9c-b588-94d3096dbf4c")
-
+func TestValidTemplateWithVersion(t *testing.T) {
 	var b bytes.Buffer
-	template := `USER=foo@example.com
-PASSWORD={{ kv "https://example.vault.azure.net/secrets/pass" }}
+	template := `PASSWORD={{ kv "https://example.vault.azure.net/secrets/pass/abc123" }}
 `
-	expected := `USER=foo@example.com
-PASSWORD=mysecretvalue2
+	expected := `PASSWORD=mysecretvalue
 `
-	client := &dummyClient{}
+	f := newTestFetcher(map[string]string{
+		"pass": "mysecretvalue",
+	})
 	r := strings.NewReader(template)
-	filter(fetcher{client, ""}, r, &b)
+	filter(f, r, &b)
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
@@ -114,52 +90,74 @@ func TestInvalidUrl(t *testing.T) {
 	template := `USER=foo@example.com
 PASSWORD={{ kv "https://invalid.sensyn.net/secrets/pass" }}
 `
-	client := &dummyClient{}
+	f := newTestFetcher(map[string]string{})
 	r := strings.NewReader(template)
 	defer func() {
-		recover()
+		if recover() == nil {
+			t.Fatalf("must panic for invalid URL")
+		}
 	}()
-	filter(fetcher{client, ""}, r, &b)
-	t.Fatalf("must be panic")
+	filter(f, r, &b)
+}
+
+func TestInvalidSecretPath(t *testing.T) {
+	var b bytes.Buffer
+	template := `PASSWORD={{ kv "https://example.vault.azure.net/keys/mykey" }}
+`
+	f := newTestFetcher(map[string]string{})
+	r := strings.NewReader(template)
+	defer func() {
+		if recover() == nil {
+			t.Fatalf("must panic for invalid secret path")
+		}
+	}()
+	filter(f, r, &b)
 }
 
 func TestEmptyLine(t *testing.T) {
 	var b bytes.Buffer
 	template := `USER=foo@example.com
 
-PASSWORD=mysecretvalue1
+PASSWORD=mysecretvalue
 `
 	expected := `USER=foo@example.com
 
-PASSWORD=mysecretvalue1
+PASSWORD=mysecretvalue
 `
-	client := &dummyClient{}
+	f := newTestFetcher(map[string]string{})
 	r := strings.NewReader(template)
-	filter(fetcher{client, ""}, r, &b)
+	filter(f, r, &b)
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
 }
 
-func TestHttpRequestError(t *testing.T) {
+func TestSecretClientError(t *testing.T) {
 	var b bytes.Buffer
 	template := `PASSWORD={{ kv "https://example.vault.azure.net/secrets/pass" }}
 `
-	client := &errorClient{}
+	f := newErrorFetcher()
 	r := strings.NewReader(template)
 	defer func() {
-		if panicVal := recover(); panicVal != nil {
-			// Should panic with error message, not nil pointer dereference
-			panicMsg := fmt.Sprintf("%v", panicVal)
-			if strings.Contains(panicMsg, "connection timeout") {
-				return // Expected behavior - error is properly propagated
-			}
-			if strings.Contains(panicMsg, "nil pointer") || strings.Contains(panicMsg, "invalid memory address") {
-				t.Fatalf("nil pointer dereference detected - fix not working: %v", panicVal)
-			}
-			t.Fatalf("unexpected panic: %v", panicVal)
+		if panicVal := recover(); panicVal == nil {
+			t.Fatalf("expected panic due to error, but none occurred")
 		}
 	}()
-	filter(fetcher{client, ""}, r, &b)
-	t.Fatalf("expected panic due to error, but none occurred")
+	filter(f, r, &b)
+}
+
+func TestSecretNotFound(t *testing.T) {
+	var b bytes.Buffer
+	template := `PASSWORD={{ kv "https://example.vault.azure.net/secrets/nonexistent" }}
+`
+	f := newTestFetcher(map[string]string{
+		"other": "value",
+	})
+	r := strings.NewReader(template)
+	defer func() {
+		if recover() == nil {
+			t.Fatalf("must panic for secret not found")
+		}
+	}()
+	filter(f, r, &b)
 }
