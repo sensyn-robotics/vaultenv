@@ -33,7 +33,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-	filter(f, os.Stdin, os.Stdout)
+	if err := filter(f, os.Stdin, os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func newFetcher() (*fetcher, error) {
@@ -85,24 +88,30 @@ func newCredential() (azcore.TokenCredential, error) {
 	return azidentity.NewChainedTokenCredential(creds, nil)
 }
 
-func filter(f *fetcher, in io.Reader, out io.Writer) {
+func filter(f *fetcher, in io.Reader, out io.Writer) error {
 	t := template.New(".env").Funcs(template.FuncMap{
 		"kv": f.fetch,
 	})
 	scanner := bufio.NewScanner(in)
+	lineNum := 0
 	for scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
+		lineNum++
 		line := scanner.Text()
 		if line != "" {
-			err := template.Must(t.Parse(line)).Execute(out, nil)
+			parsed, err := t.Parse(line)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("line %d: failed to parse template %q: %w", lineNum, line, err)
+			}
+			if err := parsed.Execute(out, nil); err != nil {
+				return fmt.Errorf("line %d: failed to process %q: %w", lineNum, line, err)
 			}
 		}
 		out.Write([]byte{'\n'})
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("failed to read input: %w", err)
+	}
+	return nil
 }
 
 func (f *fetcher) fetch(rawurl string) (string, error) {

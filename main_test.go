@@ -63,7 +63,9 @@ PASSWORD=mysecretvalue
 		"pass": "mysecretvalue",
 	})
 	r := strings.NewReader(template)
-	filter(f, r, &b)
+	if err := filter(f, r, &b); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
@@ -79,7 +81,9 @@ func TestValidTemplateWithVersion(t *testing.T) {
 		"pass": "mysecretvalue",
 	})
 	r := strings.NewReader(template)
-	filter(f, r, &b)
+	if err := filter(f, r, &b); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
@@ -92,12 +96,16 @@ PASSWORD={{ kv "https://invalid.sensyn.net/secrets/pass" }}
 `
 	f := newTestFetcher(map[string]string{})
 	r := strings.NewReader(template)
-	defer func() {
-		if recover() == nil {
-			t.Fatalf("must panic for invalid URL")
-		}
-	}()
-	filter(f, r, &b)
+	err := filter(f, r, &b)
+	if err == nil {
+		t.Fatalf("expected error for invalid URL")
+	}
+	if !strings.Contains(err.Error(), "invalid url") {
+		t.Fatalf("expected 'invalid url' in error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "line 2") {
+		t.Fatalf("expected line number in error, got: %v", err)
+	}
 }
 
 func TestInvalidSecretPath(t *testing.T) {
@@ -106,12 +114,13 @@ func TestInvalidSecretPath(t *testing.T) {
 `
 	f := newTestFetcher(map[string]string{})
 	r := strings.NewReader(template)
-	defer func() {
-		if recover() == nil {
-			t.Fatalf("must panic for invalid secret path")
-		}
-	}()
-	filter(f, r, &b)
+	err := filter(f, r, &b)
+	if err == nil {
+		t.Fatalf("expected error for invalid secret path")
+	}
+	if !strings.Contains(err.Error(), "invalid secret URL format") {
+		t.Fatalf("expected 'invalid secret URL format' in error, got: %v", err)
+	}
 }
 
 func TestEmptyLine(t *testing.T) {
@@ -126,7 +135,9 @@ PASSWORD=mysecretvalue
 `
 	f := newTestFetcher(map[string]string{})
 	r := strings.NewReader(template)
-	filter(f, r, &b)
+	if err := filter(f, r, &b); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if b.String() != expected {
 		t.Fatalf("got:%s want:%s", b.String(), expected)
 	}
@@ -138,12 +149,13 @@ func TestSecretClientError(t *testing.T) {
 `
 	f := newErrorFetcher()
 	r := strings.NewReader(template)
-	defer func() {
-		if panicVal := recover(); panicVal == nil {
-			t.Fatalf("expected panic due to error, but none occurred")
-		}
-	}()
-	filter(f, r, &b)
+	err := filter(f, r, &b)
+	if err == nil {
+		t.Fatalf("expected error due to client error")
+	}
+	if !strings.Contains(err.Error(), "connection timeout") {
+		t.Fatalf("expected 'connection timeout' in error, got: %v", err)
+	}
 }
 
 func TestSecretNotFound(t *testing.T) {
@@ -154,10 +166,11 @@ func TestSecretNotFound(t *testing.T) {
 		"other": "value",
 	})
 	r := strings.NewReader(template)
-	defer func() {
-		if recover() == nil {
-			t.Fatalf("must panic for secret not found")
-		}
-	}()
-	filter(f, r, &b)
+	err := filter(f, r, &b)
+	if err == nil {
+		t.Fatalf("expected error for secret not found")
+	}
+	if !strings.Contains(err.Error(), "secret not found") {
+		t.Fatalf("expected 'secret not found' in error, got: %v", err)
+	}
 }
