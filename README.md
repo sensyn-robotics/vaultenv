@@ -10,8 +10,6 @@ tar xzf vaultenv_<version>_linux_amd64.tar.gz
 ```
 ### go install
 ```
-go get github.com/sensyn-robotics/vaultenv
-# for go v1.18 and above
 go install github.com/sensyn-robotics/vaultenv@latest
 ```
 ## Usage
