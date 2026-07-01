@@ -2,6 +2,13 @@
 # vaultenv 
 Replace Azure Keyvault Secret Identifier written into .env etc.
 ## Installation
+### Prebuilt binary
+Download the linux/amd64 archive from the [Releases](https://github.com/sensyn-robotics/vaultenv/releases) page and extract it.
+```
+tar xzf vaultenv_<version>_linux_amd64.tar.gz
+./vaultenv -version
+```
+### go install
 ```
 go get github.com/sensyn-robotics/vaultenv
 # for go v1.18 and above
@@ -35,4 +42,10 @@ PASSWORD1={{ kv "https://keyvault-name.vault.azure.net/secrets/example-password"
 $ cat .env | vaultenv
 USER1=user1
 PASSWORD1=SecretsFromAzureKeyVault
+```
+## Release
+Push a `v*` tag. The release workflow runs [GoReleaser](https://goreleaser.com/), which creates a GitHub Release and attaches the linux/amd64 archive and `checksums.txt`.
+```
+git tag v1.2.3
+git push origin v1.2.3
 ```

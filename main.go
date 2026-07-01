@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strings"
 	"text/template"
 	"time"
@@ -27,7 +29,29 @@ type fetcher struct {
 	clients map[string]secretClient
 }
 
+// version is injected at release build time via ldflags (-X main.version=...).
+// It is empty for `go install` and local builds, where versionString() falls
+// back to the module version embedded by the Go toolchain.
+var version = ""
+
+func versionString() string {
+	if version != "" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" {
+		return bi.Main.Version
+	}
+	return "unknown"
+}
+
 func main() {
+	showVersion := flag.Bool("version", false, "print version and exit")
+	flag.Parse()
+	if *showVersion {
+		fmt.Println(versionString())
+		return
+	}
+
 	f, err := newFetcher()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
